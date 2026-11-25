@@ -2,40 +2,54 @@
 email_store.py
 --------------
 MongoDB-backed store for classified emails.
-Replaces the previous in-memory list.
-
-Collection  :  spam_detector.emails
-Index       :  { email_id: 1 }  (unique — prevents duplicates)
+Falls back to in-memory storage if MongoDB is unavailable
+(so the app still starts on Render even before MONGO_URI is set).
 """
 
 import threading
 from datetime import datetime
-from pymongo import MongoClient, DESCENDING, errors as mongo_errors
 import sys, os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import MONGO_URI, MONGO_DB, MONGO_COLLECTION, MAX_EMAILS
 
-# ── Connection ────────────────────────────────────────────────────────────────
-_lock   = threading.Lock()
-_client = None
-_col    = None
-
+# ── State ─────────────────────────────────────────────────────────────────────
+_lock          = threading.Lock()
 _status        = "idle"
 _error_message = ""
 _last_updated  = None
 
+# MongoDB objects – set to None until first successful connection
+_client        = None
+_col           = None
+_mongo_ok      = False          # True once we confirm MongoDB is reachable
 
-def _get_collection():
-    global _client, _col
-    if _col is None:
-        _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=4000)
-        db      = _client[MONGO_DB]
-        _col    = db[MONGO_COLLECTION]
-        # Unique index on email_id so upserts never duplicate
-        _col.create_index("email_id", unique=True)
+# In-memory fallback used when MongoDB is unavailable
+_mem_emails    = []
+
+
+# ── MongoDB connection ────────────────────────────────────────────────────────
+def _connect():
+    """Try to connect to MongoDB. Returns the collection or None."""
+    global _client, _col, _mongo_ok
+    if _mongo_ok and _col is not None:
+        return _col
+    try:
+        from pymongo import MongoClient, DESCENDING
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
+        client.admin.command("ping")           # test the connection
+        db    = client[MONGO_DB]
+        col   = db[MONGO_COLLECTION]
+        col.create_index("email_id", unique=True)
+        _client   = client
+        _col      = col
+        _mongo_ok = True
         print(f"[MongoDB] Connected → {MONGO_URI}  db={MONGO_DB}  col={MONGO_COLLECTION}")
-    return _col
+        return _col
+    except Exception as exc:
+        _mongo_ok = False
+        print(f"[MongoDB] Unavailable – using in-memory store. ({exc})")
+        return None
 
 
 # ── Status helpers ────────────────────────────────────────────────────────────
@@ -52,41 +66,47 @@ def get_status():
             "status":       _status,
             "error":        _error_message,
             "last_updated": _last_updated.isoformat() if _last_updated else None,
+            "storage":      "mongodb" if _mongo_ok else "memory",
         }
 
 
 # ── Write ─────────────────────────────────────────────────────────────────────
 def upsert_emails(classified_list):
-    """
-    Insert new classified emails into MongoDB.
-    Skips emails that already exist (matched by email_id).
-    Prunes oldest records so the collection stays under MAX_EMAILS.
-    """
     global _last_updated
-    col = _get_collection()
+    col = _connect()
 
-    for email in classified_list:
-        doc = {**email, "email_id": email["id"]}    # keep original id + add indexed field
-        try:
-            col.update_one(
-                {"email_id": email["id"]},
-                {"$setOnInsert": doc},
-                upsert=True,
-            )
-        except mongo_errors.DuplicateKeyError:
-            pass    # already exists — skip
-
-    # Prune: keep only the MAX_EMAILS most recent documents
-    total = col.count_documents({})
-    if total > MAX_EMAILS:
-        oldest_ids = [
-            d["_id"]
-            for d in col.find({}, {"_id": 1})
-                        .sort("classified_at", DESCENDING)
-                        .skip(MAX_EMAILS)
-        ]
-        if oldest_ids:
-            col.delete_many({"_id": {"$in": oldest_ids}})
+    if col is not None:
+        # ── MongoDB path ──────────────────────────────────────────────────────
+        from pymongo import errors as me, DESCENDING
+        for email in classified_list:
+            doc = {**email, "email_id": email["id"]}
+            try:
+                col.update_one(
+                    {"email_id": email["id"]},
+                    {"$setOnInsert": doc},
+                    upsert=True,
+                )
+            except me.DuplicateKeyError:
+                pass
+        # Prune to MAX_EMAILS
+        total = col.count_documents({})
+        if total > MAX_EMAILS:
+            oldest = [
+                d["_id"] for d in
+                col.find({}, {"_id": 1})
+                   .sort("classified_at", DESCENDING)
+                   .skip(MAX_EMAILS)
+            ]
+            if oldest:
+                col.delete_many({"_id": {"$in": oldest}})
+    else:
+        # ── In-memory fallback ────────────────────────────────────────────────
+        with _lock:
+            existing = {e["id"] for e in _mem_emails}
+            for email in classified_list:
+                if email["id"] not in existing:
+                    _mem_emails.insert(0, email)
+            del _mem_emails[MAX_EMAILS:]
 
     with _lock:
         _last_updated = datetime.now()
@@ -94,21 +114,29 @@ def upsert_emails(classified_list):
 
 # ── Read ──────────────────────────────────────────────────────────────────────
 def get_emails(limit=100):
-    """Return up to `limit` emails, newest first."""
-    col  = _get_collection()
-    docs = list(
-        col.find({}, {"_id": 0, "email_id": 0})
-           .sort("classified_at", DESCENDING)
-           .limit(limit)
-    )
-    return docs
+    col = _connect()
+    if col is not None:
+        from pymongo import DESCENDING
+        return list(
+            col.find({}, {"_id": 0, "email_id": 0})
+               .sort("classified_at", DESCENDING)
+               .limit(limit)
+        )
+    with _lock:
+        return list(_mem_emails[:limit])
 
 
 def get_stats():
-    col   = _get_collection()
-    total = col.count_documents({})
-    spam  = col.count_documents({"label": "spam"})
-    ham   = col.count_documents({"label": "ham"})
+    col = _connect()
+    if col is not None:
+        total = col.count_documents({})
+        spam  = col.count_documents({"label": "spam"})
+        ham   = col.count_documents({"label": "ham"})
+    else:
+        with _lock:
+            total = len(_mem_emails)
+            spam  = sum(1 for e in _mem_emails if e.get("label") == "spam")
+            ham   = sum(1 for e in _mem_emails if e.get("label") == "ham")
     return {
         "total":    total,
         "spam":     spam,
@@ -118,5 +146,8 @@ def get_stats():
 
 
 def clear():
-    col = _get_collection()
-    col.delete_many({})
+    col = _connect()
+    if col is not None:
+        col.delete_many({})
+    with _lock:
+        _mem_emails.clear()
