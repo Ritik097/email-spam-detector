@@ -1,0 +1,433 @@
+/* =====================================================================
+   style.css  –  Email Spam Detector
+   Clean, modern, responsive layout
+   ===================================================================== */
+
+/* ── Reset & Base ─────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #f0f4f8;
+  color: #2d3748;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ───────────────────────────────────────────────────────── */
+.site-header {
+  background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 60%, #3182ce 100%);
+  color: #fff;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.header-inner {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.logo-icon {
+  font-size: 2rem;
+}
+
+.logo h1 {
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.tagline {
+  font-size: 1rem;
+  opacity: 0.85;
+  font-weight: 400;
+}
+
+/* ── Main Container ───────────────────────────────────────────────── */
+.container {
+  flex: 1;
+  max-width: 860px;
+  width: 100%;
+  margin: 2rem auto;
+  padding: 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────── */
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.75rem 2rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  border: 1px solid #e2e8f0;
+}
+
+.card h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #1a365d;
+}
+
+.card p {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: #4a5568;
+}
+
+/* ── About Badges ─────────────────────────────────────────────────── */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.badge {
+  background: #ebf8ff;
+  color: #2b6cb0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid #bee3f8;
+}
+
+/* ── Textarea ─────────────────────────────────────────────────────── */
+.hint {
+  margin-bottom: 0.75rem;
+}
+
+.email-textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 1rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  color: #2d3748;
+  background: #f7fafc;
+}
+
+.email-textarea:focus {
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(49,130,206,0.15);
+  background: #fff;
+}
+
+.email-textarea::placeholder {
+  color: #a0aec0;
+}
+
+.char-count {
+  text-align: right;
+  font-size: 0.8rem;
+  color: #718096;
+  margin-top: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────── */
+.button-group {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  flex: 1;
+  min-width: 140px;
+  padding: 0.75rem 1.5rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-predict {
+  background: linear-gradient(135deg, #2b6cb0, #3182ce);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(49,130,206,0.35);
+}
+
+.btn-predict:hover {
+  background: linear-gradient(135deg, #1a365d, #2b6cb0);
+  box-shadow: 0 6px 14px rgba(49,130,206,0.45);
+}
+
+.btn-clear {
+  background: #f7fafc;
+  color: #4a5568;
+  border: 2px solid #e2e8f0;
+}
+
+.btn-clear:hover {
+  background: #fed7d7;
+  border-color: #feb2b2;
+  color: #c53030;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Loading Spinner ──────────────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Result Card ──────────────────────────────────────────────────── */
+.result-card {
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
+
+.result-card.visible {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Spam result */
+.result-spam {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.result-spam .result-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #fff5f5, #fed7d7);
+  border: 2px solid #fc8181;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  width: 100%;
+}
+
+.result-spam .result-icon {
+  font-size: 2rem;
+}
+
+.result-spam .result-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #c53030;
+}
+
+.result-spam .result-subtitle {
+  font-size: 0.85rem;
+  color: #742a2a;
+  font-weight: 500;
+}
+
+/* Ham / not-spam result */
+.result-ham .result-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #f0fff4, #c6f6d5);
+  border: 2px solid #68d391;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  width: 100%;
+}
+
+.result-ham {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.result-ham .result-icon {
+  font-size: 2rem;
+}
+
+.result-ham .result-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #276749;
+}
+
+.result-ham .result-subtitle {
+  font-size: 0.85rem;
+  color: #22543d;
+  font-weight: 500;
+}
+
+/* Confidence bar */
+.confidence-wrap {
+  width: 100%;
+  margin-top: 0.4rem;
+}
+
+.confidence-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 0.3rem;
+}
+
+.confidence-bar-bg {
+  background: #e2e8f0;
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.confidence-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.bar-spam   { background: linear-gradient(90deg, #fc8181, #e53e3e); }
+.bar-ham    { background: linear-gradient(90deg, #68d391, #38a169); }
+
+/* Result message */
+.result-message {
+  font-size: 0.93rem;
+  color: #4a5568;
+  line-height: 1.6;
+  padding: 0.75rem 1rem;
+  background: #f7fafc;
+  border-left: 4px solid #cbd5e0;
+  border-radius: 0 6px 6px 0;
+  width: 100%;
+}
+
+/* Error */
+.result-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #fffbeb;
+  border: 2px solid #f6e05e;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  font-size: 0.95rem;
+  color: #744210;
+  font-weight: 500;
+}
+
+/* ── Sample Emails ────────────────────────────────────────────────── */
+.sample-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.sample-btn {
+  padding: 0.65rem 1rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.spam-sample {
+  background: #fff5f5;
+  color: #c53030;
+  border-color: #fc8181;
+}
+
+.spam-sample:hover {
+  background: #fed7d7;
+}
+
+.ham-sample {
+  background: #f0fff4;
+  color: #276749;
+  border-color: #68d391;
+}
+
+.ham-sample:hover {
+  background: #c6f6d5;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────── */
+.site-footer {
+  background: #1a365d;
+  color: rgba(255,255,255,0.75);
+  text-align: center;
+  padding: 1.5rem 1.25rem;
+  font-size: 0.85rem;
+  line-height: 1.8;
+}
+
+.footer-note {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .card {
+    padding: 1.25rem 1rem;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}

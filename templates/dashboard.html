@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Email Spam Detector – Live Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f0f4f8;color:#2d3748;min-height:100vh;display:flex;flex-direction:column}
+
+/* HEADER */
+.site-header{background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 60%,#3182ce 100%);color:#fff;padding:1.5rem 2rem}
+.header-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;max-width:1100px;margin:0 auto}
+.logo{display:flex;align-items:center;gap:.6rem}
+.logo-icon{font-size:2rem}
+.logo h1{font-size:1.6rem;font-weight:700}
+.nav-link{background:rgba(255,255,255,.18);color:#fff;text-decoration:none;padding:.45rem 1rem;border-radius:7px;font-size:.85rem;font-weight:600;border:1px solid rgba(255,255,255,.3)}
+.nav-link:hover{background:rgba(255,255,255,.28)}
+.status-bar{text-align:center;font-size:.82rem;opacity:.8;margin-top:.5rem;max-width:1100px;margin-left:auto;margin-right:auto}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;max-width:1100px;margin:1.5rem auto;padding:0 1.5rem;width:100%}
+.stat-card{background:#fff;border-radius:12px;padding:1.1rem 1.25rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border:1px solid #e2e8f0;text-align:center}
+.stat-num{font-size:2rem;font-weight:800;line-height:1.1}
+.stat-label{font-size:.78rem;color:#718096;font-weight:600;margin-top:.25rem;text-transform:uppercase;letter-spacing:.04em}
+.num-total{color:#2b6cb0}
+.num-spam{color:#c53030}
+.num-ham{color:#276749}
+.num-pct{color:#744210}
+
+/* MAIN */
+.container{flex:1;max-width:1100px;width:100%;margin:0 auto;padding:0 1.5rem 2rem}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem}
+.toolbar h2{font-size:1.1rem;font-weight:700;color:#1a365d}
+.toolbar-right{display:flex;gap:.6rem;align-items:center}
+.filter-btn{padding:.4rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;border-radius:7px;cursor:pointer;border:2px solid #e2e8f0;background:#fff;color:#4a5568}
+.filter-btn.active{border-color:#3182ce;background:#ebf8ff;color:#2b6cb0}
+.filter-btn.f-spam.active{border-color:#fc8181;background:#fff5f5;color:#c53030}
+.filter-btn.f-ham.active{border-color:#68d391;background:#f0fff4;color:#276749}
+.refresh-btn{padding:.4rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;border-radius:7px;cursor:pointer;border:none;background:#3182ce;color:#fff}
+.refresh-btn:hover{background:#2b6cb0}
+
+/* EMAIL LIST */
+.email-list{display:flex;flex-direction:column;gap:.75rem}
+
+.email-card{background:#fff;border-radius:12px;padding:1.1rem 1.4rem;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid #e2e8f0;border-left:5px solid #e2e8f0;cursor:pointer;transition:box-shadow .18s,transform .15s}
+.email-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.12);transform:translateY(-1px)}
+.email-card.spam{border-left-color:#fc8181}
+.email-card.ham{border-left-color:#68d391}
+
+.email-top{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.email-subject{font-size:.97rem;font-weight:700;color:#1a365d;margin-bottom:.25rem}
+.email-from{font-size:.8rem;color:#718096}
+.email-date{font-size:.75rem;color:#a0aec0;white-space:nowrap}
+
+.verdict{display:flex;align-items:center;gap:.4rem;font-size:.82rem;font-weight:700;padding:.3rem .75rem;border-radius:999px;white-space:nowrap}
+.verdict.spam{background:#fff5f5;color:#c53030;border:1.5px solid #fc8181}
+.verdict.ham{background:#f0fff4;color:#276749;border:1.5px solid #68d391}
+
+.email-snippet{font-size:.85rem;color:#4a5568;margin-top:.5rem;line-height:1.55;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.email-body-full{display:none;font-size:.85rem;color:#4a5568;margin-top:.5rem;line-height:1.6;white-space:pre-wrap;background:#f7fafc;padding:.75rem;border-radius:7px}
+
+.conf-mini{display:flex;align-items:center;gap:.5rem;margin-top:.6rem}
+.conf-mini-label{font-size:.75rem;color:#718096;font-weight:600;min-width:80px}
+.mini-bar-bg{flex:1;background:#e2e8f0;border-radius:999px;height:7px;overflow:hidden}
+.mini-bar-fill{height:100%;border-radius:999px}
+.mini-bar-spam{background:linear-gradient(90deg,#fc8181,#e53e3e)}
+.mini-bar-ham{background:linear-gradient(90deg,#68d391,#38a169)}
+.conf-pct{font-size:.75rem;font-weight:700;min-width:36px;text-align:right}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:3rem 1rem;color:#a0aec0}
+.empty-icon{font-size:3rem;margin-bottom:.75rem}
+.empty-state p{font-size:.95rem}
+
+/* PULSE INDICATOR */
+.pulse-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#68d391;margin-right:.4rem;animation:pulse 1.8s ease-in-out infinite}
+.pulse-dot.error{background:#fc8181;animation:none}
+.pulse-dot.fetching{background:#f6e05e}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+
+/* DEMO BANNER */
+.demo-banner{background:#fffbeb;border:1.5px solid #f6e05e;border-radius:10px;padding:.85rem 1.25rem;margin-bottom:1rem;font-size:.88rem;color:#744210;display:flex;align-items:center;gap:.6rem}
+
+/* FOOTER */
+.site-footer{background:#1a365d;color:rgba(255,255,255,.7);text-align:center;padding:1.25rem;font-size:.8rem;line-height:1.9}
+
+/* MOBILE */
+@media(max-width:650px){
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .email-top{flex-direction:column}
+  .header-row{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-row">
+    <div class="logo">
+      <span class="logo-icon">&#128231;</span>
+      <h1>Email Spam Detector</h1>
+    </div>
+    <a class="nav-link" href="/manual">&#9997; Manual Check</a>
+  </div>
+  <div class="status-bar">
+    <span class="pulse-dot" id="pulseDot"></span>
+    <span id="statusText">Connecting...</span>
+    &nbsp;&mdash;&nbsp;
+    Auto-refreshes every 10 seconds &nbsp;|&nbsp;
+    Open on your phone: <strong id="localIp">http://&lt;your-mac-ip&gt;:5000</strong>
+  </div>
+</header>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-num num-total" id="statTotal">0</div>
+    <div class="stat-label">Total Checked</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num num-spam" id="statSpam">0</div>
+    <div class="stat-label">&#128680; Spam</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num num-ham" id="statHam">0</div>
+    <div class="stat-label">&#10003; Legitimate</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num num-pct" id="statPct">0%</div>
+    <div class="stat-label">Spam Rate</div>
+  </div>
+</div>
+
+<main class="container">
+
+  <div id="demoBanner" class="demo-banner" style="display:none">
+    &#9888; <span><strong>Demo Mode</strong> &mdash; showing sample emails. Add <code>credentials.json</code> to <code>gmail_integration/</code> to connect your real Gmail inbox.</span>
+  </div>
+
+  <div class="toolbar">
+    <h2>&#128235; Inbox Scan Results</h2>
+    <div class="toolbar-right">
+      <button class="filter-btn active" id="btnAll"  onclick="setFilter('all')">All</button>
+      <button class="filter-btn f-spam"  id="btnSpam" onclick="setFilter('spam')">&#128680; Spam</button>
+      <button class="filter-btn f-ham"   id="btnHam"  onclick="setFilter('ham')">&#10003; Legit</button>
+      <button class="refresh-btn" onclick="fetchNow()">&#8635; Refresh</button>
+    </div>
+  </div>
+
+  <div class="email-list" id="emailList">
+    <div class="empty-state">
+      <div class="empty-icon">&#128231;</div>
+      <p>Waiting for emails...</p>
+    </div>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  &#127891; Semester 3 Academic Project &nbsp;|&nbsp; AI &amp; ML &nbsp;|&nbsp;
+  Python &bull; Flask &bull; Scikit-learn &bull; Naive Bayes
+</footer>
+
+<script>
+var allEmails = [];
+var currentFilter = "all";
+
+function setFilter(f) {
+  currentFilter = f;
+  document.getElementById("btnAll").className  = "filter-btn" + (f==="all"  ? " active" : "");
+  document.getElementById("btnSpam").className = "filter-btn f-spam" + (f==="spam" ? " active" : "");
+  document.getElementById("btnHam").className  = "filter-btn f-ham"  + (f==="ham"  ? " active" : "");
+  renderList();
+}
+
+function renderList() {
+  var list = document.getElementById("emailList");
+  var emails = allEmails.filter(function(e) {
+    if (currentFilter === "spam") return e.label === "spam";
+    if (currentFilter === "ham")  return e.label === "ham";
+    return true;
+  });
+
+  if (emails.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128231;</div><p>No emails yet. Waiting for the next scan...</p></div>';
+    return;
+  }
+
+  list.innerHTML = emails.map(function(e) {
+    var isSpam   = e.label === "spam";
+    var cardCls  = "email-card " + (isSpam ? "spam" : "ham");
+    var vCls     = "verdict " + (isSpam ? "spam" : "ham");
+    var vIcon    = isSpam ? "&#128680;" : "&#10003;";
+    var vText    = isSpam ? "Spam" : "Legitimate";
+    var barCls   = isSpam ? "mini-bar-spam" : "mini-bar-ham";
+    var conf     = e.confidence || 0;
+    var body     = e.body || e.snippet || "";
+    var snippet  = body.length > 160 ? body.slice(0, 157) + "..." : body;
+
+    return '<div class="' + cardCls + '" onclick="toggleBody(this)">' +
+      '<div class="email-top">' +
+        '<div>' +
+          '<div class="email-subject">' + esc(e.subject) + '</div>' +
+          '<div class="email-from">From: ' + esc(e.sender) + '</div>' +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:.4rem">' +
+          '<span class="' + vCls + '">' + vIcon + ' ' + vText + '</span>' +
+          '<span class="email-date">' + esc(e.date.substring(0,22) || e.classified_at || "") + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<p class="email-snippet">' + esc(snippet) + '</p>' +
+      '<div class="email-body-full">' + esc(body) + '</div>' +
+      '<div class="conf-mini">' +
+        '<span class="conf-mini-label">Confidence</span>' +
+        '<div class="mini-bar-bg"><div class="mini-bar-fill ' + barCls + '" style="width:' + conf + '%"></div></div>' +
+        '<span class="conf-pct">' + conf + '%</span>' +
+      '</div>' +
+    '</div>';
+  }).join("");
+}
+
+function toggleBody(card) {
+  var snippet  = card.querySelector(".email-snippet");
+  var bodyFull = card.querySelector(".email-body-full");
+  var showing  = bodyFull.style.display === "block";
+  bodyFull.style.display  = showing ? "none"  : "block";
+  snippet.style.display   = showing ? "-webkit-box" : "none";
+}
+
+function updateStats(stats) {
+  document.getElementById("statTotal").textContent = stats.total;
+  document.getElementById("statSpam").textContent  = stats.spam;
+  document.getElementById("statHam").textContent   = stats.ham;
+  document.getElementById("statPct").textContent   = stats.spam_pct + "%";
+}
+
+function updateStatus(s) {
+  var dot  = document.getElementById("pulseDot");
+  var text = document.getElementById("statusText");
+  var demo = document.getElementById("demoBanner");
+
+  if (s.status === "demo") {
+    dot.className  = "pulse-dot";
+    dot.style.background = "#f6ad55";
+    text.textContent = "Demo mode — sample emails";
+    demo.style.display = "flex";
+  } else if (s.status === "ok") {
+    dot.className  = "pulse-dot";
+    dot.style.background = "#68d391";
+    text.textContent = "Connected to Gmail — last scan: " + (s.last_updated ? new Date(s.last_updated).toLocaleTimeString() : "just now");
+    demo.style.display = "none";
+  } else if (s.status === "fetching") {
+    dot.className  = "pulse-dot fetching";
+    dot.style.background = "#f6e05e";
+    text.textContent = "Scanning inbox...";
+  } else if (s.status === "error") {
+    dot.className  = "pulse-dot error";
+    dot.style.background = "#fc8181";
+    text.textContent = "Error: " + (s.error || "unknown");
+  } else {
+    text.textContent = "Starting...";
+  }
+}
+
+async function fetchNow() {
+  try {
+    var [emailsRes, statsRes, statusRes] = await Promise.all([
+      fetch("/api/emails"),
+      fetch("/api/stats"),
+      fetch("/api/status")
+    ]);
+    allEmails = await emailsRes.json();
+    updateStats(await statsRes.json());
+    updateStatus(await statusRes.json());
+    renderList();
+  } catch(err) {
+    console.error("Fetch error:", err);
+  }
+}
+
+function esc(s) {
+  return String(s||"")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// Initial load + auto-refresh every 10 seconds
+fetchNow();
+setInterval(fetchNow, 10000);
+</script>
+</body>
+</html>
